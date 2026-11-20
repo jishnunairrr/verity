@@ -1,0 +1,11 @@
+# run data: applicant sheets, results and evidence never go into the repo
+output/
+input/
+
+# local-only files
+.browser_profile/
+.tools/
+.access_code
+.share_url
+__pycache__/
+*.pyc

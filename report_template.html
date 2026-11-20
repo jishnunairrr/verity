@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verity Report</title>
+<style>
+:root{
+  --bg:#f4f5f7; --panel:#ffffff; --ink:#18202f; --muted:#667085; --line:#e3e6ec; --head:#1f2a44;
+  --good:#12805c; --good-bg:#e3f5ec; --bad:#c0362c; --bad-bg:#fdeceb; --warn:#a36a00; --warn-bg:#fff4d6;
+  --info:#3b5bdb; --info-bg:#e9eeff; --none:#7a8394; --none-bg:#eef0f4;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#10141c; --panel:#181e2a; --ink:#e8ebf1; --muted:#98a2b3; --line:#283041; --head:#0c1018;
+    --good:#4fd1a1; --good-bg:#12372c; --bad:#ff8f85; --bad-bg:#40201e; --warn:#f2c14e; --warn-bg:#3a2f10;
+    --info:#93a8ff; --info-bg:#1c2547; --none:#98a2b3; --none-bg:#222a39; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",system-ui,-apple-system,sans-serif}
+header{background:var(--head);color:#fff;padding:22px 16px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+header .wrap{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:baseline;justify-content:space-between;padding:0}
+h1{margin:0;font-size:22px;letter-spacing:.02em}
+h1 small{font-weight:400;font-size:14px;opacity:.7;margin-left:10px}
+.meta{font-size:13px;opacity:.8}
+main{padding-top:20px;padding-bottom:48px}
+.verdict{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--good);border-radius:8px;
+  padding:14px 18px;margin-bottom:16px;font-size:16px}
+.verdict.bad{border-left-color:var(--bad)} .verdict.warn{border-left-color:var(--warn)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;cursor:pointer;text-align:left;
+  color:inherit;font:inherit}
+.kpi b{display:block;font-size:30px;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi span{color:var(--muted);font-size:13px}
+.kpi.on{outline:2px solid var(--info);outline-offset:-1px}
+.kpi.good b{color:var(--good)} .kpi.bad b{color:var(--bad)} .kpi.warn b{color:var(--warn)} .kpi.none b{color:var(--none)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px 18px}
+h2{font-size:15px;margin:0 0 12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.frow{display:grid;grid-template-columns:180px minmax(0,1fr) 150px;gap:12px;align-items:center;padding:5px 0;font-size:14px}
+.bar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--none-bg)}
+.bar i{display:block} .bar .m{background:var(--good)} .bar .x{background:var(--bad)} .bar .n{background:var(--none)}
+.frow em{font-style:normal;color:var(--muted);font-size:13px;text-align:right}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px}
+.tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.tools input{flex:1;min-width:200px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.05em;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr.row{cursor:pointer} tr.row:hover td{background:var(--bg)}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.good{color:var(--good)} .pill.good{background:var(--good-bg)}
+.bad{color:var(--bad)} .pill.bad{background:var(--bad-bg)}
+.warn{color:var(--warn)} .pill.warn{background:var(--warn-bg)}
+.none{color:var(--none)} .pill.none{background:var(--none-bg)}
+.detail td{background:var(--bg);padding:14px 18px}
+.detail table{background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.detail tr.x td{background:var(--bad-bg)}
+.note{margin:10px 0 0;font-size:13.5px} .note b{color:var(--muted);font-weight:600}
+.alert{margin:8px 0 0;padding:8px 12px;border-radius:6px;background:var(--warn-bg);color:var(--warn);font-size:13.5px}
+.caret{display:inline-block;width:14px;color:var(--muted)}
+.empty{padding:24px;text-align:center;color:var(--muted)}
+@media (max-width:640px){ .frow{grid-template-columns:1fr} .frow em{text-align:left} }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>Verity<small>License verification report</small></h1>
+  <div class="meta" id="meta"></div>
+</div></header>
+<main class="wrap">
+  <div class="verdict" id="verdict"></div>
+  <div class="kpis" id="kpis"></div>
+  <div class="grid">
+    <section class="card">
+      <h2>Where input and source disagree, by field</h2>
+      <div id="fields"></div>
+      <div class="legend"><span><i style="background:var(--good)"></i>Match</span><span><i style="background:var(--bad)"></i>Mismatch</span><span><i style="background:var(--none)"></i>Not compared (blank in input or not shown by source)</span></div>
+    </section>
+    <section class="card">
+      <h2>Applicants</h2>
+      <div class="tools"><input id="q" type="search" placeholder="Filter by name, license number or status" aria-label="Filter applicants"></div>
+      <div class="scroll"><table>
+        <thead><tr><th></th><th>S. No</th><th>Applicant</th><th>License</th><th>Search status</th><th>Discrepancies</th><th>Source</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table></div>
+    </section>
+  </div>
+</main>
+<script>
+const DATA = /*__VERITY_DATA__*/null;
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const tone = s => s === "Verified - Clear" ? "good" : s === "Verified - Discrepancy Found" ? "bad" : s === "Unable to Verify" ? "none" : "warn";
+const rtone = r => r === "MATCH" ? "good" : r === "MISMATCH" ? "bad" : "none";
+const R = DATA.results, n = R.length;
+const count = s => R.filter(r => r.status === s).length;
+let filter = null, open = new Set();
+
+document.getElementById("meta").textContent = `Input: ${DATA.meta.input}  ·  Run: ${DATA.meta.run_at}  ·  Output: ${DATA.meta.output}`;
+
+const bad = count("Verified - Discrepancy Found"), clear = count("Verified - Clear"),
+      alertN = count("Verified - With Alerts"), review = count("Needs Review"), unable = count("Unable to Verify");
+const v = document.getElementById("verdict");
+if (bad) { v.className = "verdict bad"; v.innerHTML = `<b>${bad} of ${n}</b> applicant${n>1?"s":""} ha${bad>1?"ve":"s"} details that do not match the agency record.`; }
+else if (alertN + review + unable) { v.className = "verdict warn"; v.innerHTML = `No mismatches found, but <b>${alertN + review + unable} of ${n}</b> need${alertN+review+unable>1?"":"s"} a reviewer's attention.`; }
+else { v.innerHTML = `All <b>${n}</b> applicant${n>1?"s":""} match the agency record.`; }
+
+const kpis = [["Applicants", n, "", null], ["Clear", clear, "good", "Verified - Clear"], ["Discrepancy found", bad, "bad", "Verified - Discrepancy Found"],
+  ["Matched, with alerts", alertN, "warn", "Verified - With Alerts"], ["Needs review", review, "warn", "Needs Review"], ["Unable to verify", unable, "none", "Unable to Verify"]];
+function drawKpis(){
+  document.getElementById("kpis").innerHTML = kpis.map(([label, val, t, s], i) =>
+    `<button class="kpi ${t} ${filter === s && i ? "on" : ""}" data-i="${i}"><b>${val}</b><span>${label}</span></button>`).join("");
+}
+document.getElementById("kpis").addEventListener("click", e => {
+  const b = e.target.closest(".kpi"); if (!b) return;
+  const s = kpis[b.dataset.i][3]; filter = filter === s ? null : s; drawKpis(); drawRows();
+});
+
+document.getElementById("fields").innerHTML = DATA.fields.map(f => {
+  const m = f["MATCH"], x = f["MISMATCH"], o = f["NOT PROVIDED"] + f["NOT ON SOURCE"], t = (m + x + o) || 1;
+  return `<div class="frow"><span>${esc(f.label)}</span><div class="bar"><i class="m" style="width:${m/t*100}%"></i><i class="x" style="width:${x/t*100}%"></i><i class="n" style="width:${o/t*100}%"></i></div><em>${x ? `<span class="bad">${x} mismatch</span>` : m ? `${m} match` : "not compared"}</em></div>`;
+}).join("");
+
+function drawRows(){
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const list = R.map((r, i) => [r, i]).filter(([r]) => (!filter || r.status === filter) && (!q || JSON.stringify([r.applicant, r.status, r.s_no, r.comparison.map(c => [c.input, c.verified])]).toLowerCase().includes(q)));
+  const lic = r => { const c = Object.fromEntries(r.comparison.map(c => [c.field, c])); return [c.license_type.input || c.license_type.verified, c.license_number.input || c.license_number.verified].filter(Boolean).join(" · "); };
+  document.getElementById("rows").innerHTML = list.length ? list.map(([r, i]) => {
+    const x = r.comparison.filter(c => c.result === "MISMATCH");
+    let html = `<tr class="row" data-i="${i}"><td><span class="caret">${open.has(i) ? "▾" : "▸"}</span></td><td>${esc(r.s_no)}</td><td><b>${esc(r.applicant || "—")}</b></td><td>${esc(lic(r))}</td><td><span class="pill ${tone(r.status)}">${esc(r.status)}</span></td><td>${x.length ? `<span class="bad">${x.map(c => esc(c.label)).join(", ")}</span>` : "—"}</td><td>${esc(r.source || "—")}</td></tr>`;
+    if (open.has(i)) html += `<tr class="detail"><td colspan="7"><div class="scroll"><table><thead><tr><th>Field</th><th>Input (claimed)</th><th>Verified (source)</th><th>Result</th></tr></thead><tbody>${
+      r.comparison.map(c => `<tr class="${c.result === "MISMATCH" ? "x" : ""}"><td>${esc(c.label)}</td><td>${esc(c.input || "—")}</td><td>${esc(c.verified || "—")}</td><td><span class="pill ${rtone(c.result)}">${esc(c.result)}</span>${c.note ? `<div class="none" style="font-size:12px;margin-top:3px">${esc(c.note)}</div>` : ""}</td></tr>`).join("")
+    }</tbody></table></div>${r.alerts.map(a => `<div class="alert">⚠ ${esc(a)}</div>`).join("")}<p class="note"><b>Comments:</b> ${esc(r.comments)}</p>${r.evidence ? `<p class="note"><b>Evidence:</b> ${esc(r.evidence)}</p>` : ""}</td></tr>`;
+    return html;
+  }).join("") : `<tr><td colspan="7" class="empty">No applicants match this filter.</td></tr>`;
+}
+document.getElementById("rows").addEventListener("click", e => {
+  const tr = e.target.closest("tr.row"); if (!tr) return;
+  const i = +tr.dataset.i; open.has(i) ? open.delete(i) : open.add(i); drawRows();
+});
+document.getElementById("q").addEventListener("input", drawRows);
+R.forEach((r, i) => { if (r.status === "Verified - Discrepancy Found") open.add(i); });
+drawKpis(); drawRows();
+</script>
+</body>
+</html>

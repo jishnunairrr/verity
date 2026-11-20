@@ -1,0 +1,8 @@
+# run data and local-only files stay out of the image
+output/
+input/
+__pycache__/
+brag-output/
+mascot3d/
+skills-lock.json
+.*

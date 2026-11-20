@@ -1,0 +1,5 @@
+openpyxl>=3.1
+beautifulsoup4>=4.12
+playwright>=1.45
+fastapi>=0.110
+uvicorn>=0.29

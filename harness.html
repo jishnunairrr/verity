@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verity Harness</title>
+<style>
+:root{
+  --bg:#f4f5f7; --panel:#ffffff; --ink:#18202f; --muted:#667085; --line:#e3e6ec; --head:#1f2a44; --soft:#f0f2f6;
+  --good:#12805c; --good-bg:#e3f5ec; --bad:#c0362c; --bad-bg:#fdeceb; --warn:#a36a00; --warn-bg:#fff4d6;
+  --info:#3b5bdb; --info-bg:#e9eeff; --none:#7a8394; --none-bg:#eef0f4;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#10141c; --panel:#181e2a; --ink:#e8ebf1; --muted:#98a2b3; --line:#283041; --head:#0c1018; --soft:#1f2634;
+    --good:#4fd1a1; --good-bg:#12372c; --bad:#ff8f85; --bad-bg:#40201e; --warn:#f2c14e; --warn-bg:#3a2f10;
+    --info:#93a8ff; --info-bg:#1c2547; --none:#98a2b3; --none-bg:#222a39; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.5 "Segoe UI",system-ui,-apple-system,sans-serif}
+header{background:var(--head);color:#fff;padding:14px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+h1{margin:0;font-size:20px;letter-spacing:.02em}
+h1 small{font-weight:400;font-size:13px;opacity:.7;margin-left:10px}
+.state{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.12)}
+.dot{width:9px;height:9px;border-radius:50%;background:#98a2b3}
+.state.running .dot{background:#6ea8ff;animation:pulse 1.2s infinite}
+.state.waiting .dot{background:#f2c14e;animation:pulse .8s infinite}
+.state.finished .dot{background:#4fd1a1} .state.failed .dot,.state.stopped .dot{background:#ff8f85}
+@keyframes pulse{50%{opacity:.25}}
+.layout{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;padding:16px;max-width:1500px;margin:0 auto}
+@media (max-width:980px){.layout{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;min-width:0}
+h2{font-size:12px;margin:0 0 10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+h2 span{float:right;text-transform:none;letter-spacing:0;font-weight:400}
+button,select,input{font:inherit;color:inherit}
+select,input[type=number]{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.btn{padding:8px 14px;border-radius:6px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-weight:600}
+a.btn{text-decoration:none;color:inherit;text-align:center}
+.btn:hover{background:var(--soft)} .btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.primary{background:#3b5bdb;border-color:#3b5bdb;color:#fff;width:100%;padding:11px;font-size:15px}
+.btn.primary:hover{filter:brightness(1.08)} .btn.danger{color:var(--bad);border-color:var(--bad);width:100%}
+.rowgap{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap} .rowgap .btn{flex:1;font-weight:500;font-size:13px}
+label.f{display:block;font-size:12.5px;color:var(--muted);margin:10px 0 4px}
+.drop{border:1.5px dashed var(--line);border-radius:6px;padding:10px;text-align:center;color:var(--muted);font-size:13px;margin-top:8px}
+.drop.over{border-color:var(--info);background:var(--info-bg)}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.muted{color:var(--muted)} .small{font-size:12.5px}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.good{color:var(--good)} .pill.good{background:var(--good-bg)} .bad{color:var(--bad)} .pill.bad{background:var(--bad-bg)}
+.warn{color:var(--warn)} .pill.warn{background:var(--warn-bg)} .none{color:var(--none)} .pill.none{background:var(--none-bg)}
+.info{color:var(--info)} .pill.info{background:var(--info-bg)}
+.banner{border-radius:8px;padding:12px 16px;font-weight:600;background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn);display:none}
+.banner.on{display:block}
+.runbar{display:flex;gap:10px 18px;align-items:center;flex-wrap:wrap}
+.runbar b{font-size:15px}
+.progress{height:6px;border-radius:3px;background:var(--none-bg);overflow:hidden;margin-top:10px}
+.progress i{display:block;height:100%;background:var(--info);transition:width .4s}
+.app{border:1px solid var(--line);border-radius:8px;margin-top:10px;overflow:hidden}
+.app.now{border-color:var(--info);box-shadow:0 0 0 1px var(--info)}
+.apphead{display:flex;gap:10px;align-items:center;padding:10px 12px;cursor:pointer;flex-wrap:wrap}
+.apphead:hover{background:var(--soft)}
+.apphead .who{font-weight:600} .apphead .right{margin-left:auto}
+.stepper{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));padding:4px 8px 10px}
+.st{position:relative;text-align:center;font-size:11.5px;color:var(--muted);padding-top:26px;line-height:1.25}
+.st::before{content:"";position:absolute;top:9px;left:-50%;width:100%;height:2px;background:var(--line)}
+.st:first-child::before{display:none}
+.st i{position:absolute;top:0;left:50%;margin-left:-10px;width:20px;height:20px;border-radius:50%;background:var(--panel);border:2px solid var(--line);
+  font-style:normal;font-size:11px;line-height:16px;font-weight:700;color:#fff;z-index:1}
+.st.done i{background:var(--good);border-color:var(--good)} .st.done::before,.st.active::before,.st.waiting::before,.st.failed::before{background:var(--good)}
+.st.active i{border-color:var(--info);background:var(--info);animation:pulse 1.2s infinite} .st.active{color:var(--info);font-weight:600}
+.st.waiting i{border-color:var(--warn);background:var(--warn);animation:pulse .8s infinite} .st.waiting{color:var(--warn);font-weight:600}
+.st.failed i{border-color:var(--bad);background:var(--bad)} .st.failed{color:var(--bad);font-weight:600}
+.st.skipped i{border-style:dashed}
+.nowline{padding:0 14px 10px;font-size:13px}
+.detail{border-top:1px solid var(--line);background:var(--bg);padding:12px 14px}
+.detail h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:10px 0 6px}
+.detail h3:first-child{margin-top:0}
+.detail table{background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.detail tr.x td{background:var(--bad-bg)}
+.alert{margin:8px 0 0;padding:7px 11px;border-radius:6px;background:var(--warn-bg);color:var(--warn);font-size:13px}
+.two{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px}
+@media (max-width:1200px){.two{grid-template-columns:minmax(0,1fr)}}
+.live{background:var(--soft);border:1px solid var(--line);border-radius:6px;min-height:220px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.live img{display:block;width:100%;height:auto}
+.live p{color:var(--muted);padding:20px;text-align:center;margin:0}
+.log{height:330px;overflow-y:auto;font:12.5px/1.55 Consolas,"Cascadia Mono",monospace;background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.log div{white-space:pre-wrap;word-break:break-word}
+.log time{color:var(--muted);margin-right:8px} .log .error{color:var(--bad)} .log .attention{color:var(--warn);font-weight:700}
+.log .who{color:var(--info);margin-right:6px}
+.hist{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto}
+.hist button{text-align:left;border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:7px 10px;cursor:pointer}
+.hist button:hover,.hist button.on{background:var(--soft);border-color:var(--info)}
+.empty{color:var(--muted);padding:26px 10px;text-align:center}
+a{color:var(--info)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Verity<small>Agent harness</small></h1>
+  <div class="state" id="state"><span class="dot"></span><span id="stateText">Idle</span></div>
+</header>
+<div class="layout">
+  <div class="col">
+    <section class="card">
+      <h2>1 · Input sheet</h2>
+      <select id="inputSel" aria-label="Input workbook"></select>
+      <div class="drop" id="drop">Drop an .xlsx here or <a href="#" id="pick">choose a file</a><input type="file" id="file" accept=".xlsx" hidden></div>
+      <div class="rowgap"><a class="btn" href="/api/template" style="text-decoration:none;text-align:center;color:inherit">Download template</a></div>
+      <div id="previewMsg" class="small muted" style="margin-top:10px"></div>
+      <div class="scroll" id="preview"></div>
+    </section>
+    <section class="card">
+      <h2>2 · Run</h2>
+      <label class="f" for="timeout">Seconds to wait for you at the security check</label>
+      <input type="number" id="timeout" value="180" min="30" max="900" step="30">
+      <div style="margin-top:12px"><button class="btn primary" id="runBtn">Run Verity</button></div>
+      <div style="margin-top:8px"><button class="btn danger" id="stopBtn" hidden>Stop run</button></div>
+      <p class="small muted" style="margin:10px 0 0">Verity opens its own Chrome window. If the agency shows a "Verify you are human" box, tick it there — Verity waits and then continues.</p>
+    </section>
+    <section class="card">
+      <h2>Past runs</h2>
+      <div class="hist" id="hist"></div>
+    </section>
+  </div>
+
+  <div class="col">
+    <div class="banner" id="banner">⚠ Action needed — tick the "Verify you are human" box in the Verity Chrome window. The agent is waiting for you.</div>
+    <section class="card">
+      <h2>Agent track <span id="viewing"></span></h2>
+      <div id="runbar"></div>
+      <div id="track"><div class="empty">No run yet. Choose an input sheet and press <b>Run Verity</b>.</div></div>
+    </section>
+    <div class="two">
+      <section class="card">
+        <h2>Live view — the agent's browser</h2>
+        <div class="live" id="live"><p>The agent's browser appears here when it opens an agency site.</p></div>
+      </section>
+      <section class="card">
+        <h2>Activity log</h2>
+        <div class="log" id="log"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const tone = s => s === "Verified - Clear" ? "good" : s === "Verified - Discrepancy Found" ? "bad" : s === "Unable to Verify" ? "none" : "warn";
+const rtone = r => r === "MATCH" ? "good" : r === "MISMATCH" ? "bad" : "none";
+const MARK = {done: "✓", failed: "✕", waiting: "!", active: "", skipped: "", pending: ""};
+const api = async (url, opt) => { const r = await fetch(url, opt); if (r.status === 401) { location.href = "/login"; throw new Error("Sign in required"); } if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText); return r.json(); };
+
+let STEPS = [], run = null, busy = false, viewing = null /* history id or null = live */, open = new Set(), userToggled = new Set();
+let lastTrackSig = "", shownSeq = 0, shownRun = "", shownLive = "";
+
+// ---------- input ----------
+async function loadInputs(select) {
+  const names = await api("/api/inputs");
+  $("inputSel").innerHTML = names.map(n => `<option>${esc(n)}</option>`).join("") || `<option value="">No sheets yet</option>`;
+  if (select && names.includes(select)) $("inputSel").value = select;
+  await loadPreview();
+}
+async function loadPreview() {
+  const name = $("inputSel").value;
+  if (!name) { $("preview").innerHTML = ""; $("previewMsg").textContent = "Upload an input sheet to begin."; return; }
+  try {
+    const p = await api("/api/inputs/" + encodeURIComponent(name));
+    $("previewMsg").textContent = `${p.count} applicant${p.count === 1 ? "" : "s"} in ${p.name}`;
+    $("preview").innerHTML = `<table><thead><tr><th>#</th><th>Applicant</th><th>License</th><th>Agency</th></tr></thead><tbody>${p.rows.map(r =>
+      `<tr><td>${esc(r.s_no)}</td><td>${esc(r.full_name || "—")}</td><td>${esc([r.license_type, r.license_number].filter(Boolean).join(" · ") || "—")}</td><td class="muted">${esc(host(r.agency_url))}</td></tr>`).join("")}</tbody></table>`;
+  } catch (e) { $("previewMsg").textContent = "Could not read this sheet: " + e.message; $("preview").innerHTML = ""; }
+}
+const host = u => !u ? "—" : /^https?:\/\//i.test(u) ? new URL(u).hostname : "saved page";
+async function upload(file) {
+  if (!file) return;
+  try {
+    const p = await api("/api/inputs?name=" + encodeURIComponent(file.name), {method: "POST", body: await file.arrayBuffer()});
+    await loadInputs(p.name);
+  } catch (e) { $("previewMsg").textContent = "Upload failed: " + e.message; }
+}
+$("inputSel").addEventListener("change", loadPreview);
+$("pick").addEventListener("click", e => { e.preventDefault(); $("file").click(); });
+$("file").addEventListener("change", e => upload(e.target.files[0]));
+const drop = $("drop");
+["dragenter", "dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => upload(e.dataTransfer.files[0]));
+
+// ---------- run control ----------
+$("runBtn").addEventListener("click", async () => {
+  const input = $("inputSel").value; if (!input) return;
+  try {
+    await api("/api/run", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({input, timeout: +$("timeout").value || 180})});
+    viewing = null; run = null; resetView(); poll();
+  } catch (e) { alert(e.message); }
+});
+$("stopBtn").addEventListener("click", () => api("/api/stop", {method: "POST"}));
+
+// ---------- rendering ----------
+function resetView() { lastTrackSig = ""; shownSeq = 0; shownRun = ""; shownLive = ""; open = new Set(); userToggled = new Set(); $("log").innerHTML = ""; }
+
+function currentRow(r) { return r.rows.findIndex(x => !x.status); }
+
+function render() {
+  const waiting = !viewing && busy && run && run.rows.some(r => Object.values(r.steps).some(s => s.state === "waiting"));
+  const st = !run ? "idle" : viewing ? run.status : busy ? (waiting ? "waiting" : "running") : run.status;
+  $("state").className = "state " + st;
+  $("stateText").textContent = {idle: "Idle", running: "Agent running", waiting: "Waiting for you", finished: "Run finished", stopped: "Run stopped", failed: "Run failed"}[st] || st;
+  $("banner").classList.toggle("on", !!waiting);
+  document.title = waiting ? "⚠ Action needed — Verity" : busy ? "Running — Verity Harness" : "Verity Harness";
+  $("runBtn").disabled = busy || !$("inputSel").value; $("runBtn").textContent = busy ? "Agent is running…" : "Run Verity";
+  $("stopBtn").hidden = !busy;
+  $("viewing").innerHTML = viewing ? `Past run ${esc(viewing)} · <a href="#" id="backLive">back to live</a>` : "";
+  if (viewing) $("backLive").onclick = e => { e.preventDefault(); viewing = null; run = null; resetView(); poll(); };
+  if (!run) { $("runbar").innerHTML = ""; $("track").innerHTML = `<div class="empty">No run yet. Choose an input sheet and press <b>Run Verity</b>.</div>`; return; }
+
+  const done = run.rows.filter(r => r.status).length, n = run.rows.length;
+  const counts = {}; run.rows.forEach(r => { if (r.status) counts[r.status] = (counts[r.status] || 0) + 1; });
+  $("runbar").innerHTML = `<div class="runbar"><b>${esc(run.input)}</b><span class="muted">started ${esc(run.started)}${run.finished ? " · finished " + esc(run.finished.split(" ")[1]) : ""}</span>
+    <span>${done} of ${n} applicant${n === 1 ? "" : "s"} done</span>${Object.entries(counts).map(([s, c]) => `<span class="pill ${tone(s)}">${c} · ${esc(s)}</span>`).join("")}
+    ${run.files.report ? `<span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap"><a class="btn" target="_blank" href="/files/${run.id}/${run.files.report}">Open summary report</a><a class="btn" href="/files/${run.id}/${run.files.xlsx}" download>Download output Excel</a></span>` : ""}</div>
+    ${run.error ? `<div class="alert">Run failed: ${esc(run.error)}</div>` : ""}
+    <div class="progress"><i style="width:${n ? done / n * 100 : 0}%"></i></div>`;
+
+  const now = busy && !viewing ? currentRow(run) : -1;
+  run.rows.forEach((r, i) => { if (!userToggled.has(i)) { (i === now || (r.status && r.status !== "Verified - Clear" && !busy)) ? open.add(i) : (i !== now && busy && open.delete(i)); } });
+  const sig = JSON.stringify([run.rows, [...open], now]);
+  if (sig !== lastTrackSig) { lastTrackSig = sig; $("track").innerHTML = run.rows.map((r, i) => rowHtml(r, i, now)).join(""); }
+  renderLog(); renderLive();
+}
+
+function rowHtml(r, i, now) {
+  const cur = STEPS.map(([k]) => [k, r.steps[k]]).filter(([, s]) => ["active", "waiting", "failed"].includes(s.state)).pop();
+  const status = r.status ? `<span class="pill ${tone(r.status)}">${esc(r.status)}</span>` : i === now ? `<span class="pill info">Working</span>` : `<span class="pill none">Queued</span>`;
+  let html = `<div class="app ${i === now ? "now" : ""}"><div class="apphead" data-i="${i}"><span class="muted">${open.has(i) ? "▾" : "▸"} ${esc(r.s_no)}</span><span class="who">${esc(r.applicant || "(no name)")}</span>
+    <span class="muted">${esc([r.license_type, r.license_number].filter(Boolean).join(" · "))}</span><span class="muted small">${esc(host(r.url))}</span><span class="right">${status}</span></div>
+    <div class="stepper">${STEPS.map(([k, label]) => `<div class="st ${r.steps[k].state}" title="${esc(r.steps[k].detail)}"><i>${MARK[r.steps[k].state] || ""}</i>${esc(label)}</div>`).join("")}</div>`;
+  if (cur && !r.status) html += `<div class="nowline ${cur[1].state === "waiting" ? "warn" : cur[1].state === "failed" ? "bad" : "info"}">${esc(cur[1].detail || "Working…")}</div>`;
+  if (open.has(i)) {
+    html += `<div class="detail"><h3>What the agent did</h3><table><tbody>${STEPS.map(([k, label]) => { const s = r.steps[k]; return `<tr><td style="width:170px">${esc(label)}</td><td style="width:90px"><span class="pill ${ {done: "good", failed: "bad", waiting: "warn", active: "info"}[s.state] || "none"}">${esc(s.state)}</span></td><td>${esc(s.detail || "—")}</td></tr>`; }).join("")}</tbody></table>`;
+    const res = r.result;
+    if (res) {
+      html += `<h3>Input versus source</h3><div class="scroll"><table><thead><tr><th>Field</th><th>Input (claimed)</th><th>Verified (source)</th><th>Result</th></tr></thead><tbody>${res.comparison.map(c =>
+        `<tr class="${c.result === "MISMATCH" ? "x" : ""}"><td>${esc(c.label)}</td><td>${esc(c.input || "—")}</td><td>${esc(c.verified || "—")}</td><td><span class="pill ${rtone(c.result)}">${esc(c.result)}</span>${c.note ? `<div class="muted small">${esc(c.note)}</div>` : ""}</td></tr>`).join("")}</tbody></table></div>
+        ${res.alerts.map(a => `<div class="alert">⚠ ${esc(a)}</div>`).join("")}<p class="small" style="margin:10px 0 0"><b class="muted">Comments:</b> ${esc(res.comments)}</p>
+        ${/\.png$/.test(res.evidence || "") ? `<p class="small" style="margin:6px 0 0"><b class="muted">Evidence:</b> <a target="_blank" href="/files/${run.id}/evidence/${encodeURIComponent(res.evidence)}">screenshot of the agency page</a></p>` : ""}`;
+    }
+    html += `</div>`;
+  }
+  return html + `</div>`;
+}
+$("track").addEventListener("click", e => {
+  const h = e.target.closest(".apphead"); if (!h) return;
+  const i = +h.dataset.i; userToggled.add(i); open.has(i) ? open.delete(i) : open.add(i); lastTrackSig = ""; render();
+});
+
+function renderLog() {
+  const log = $("log");
+  if (shownRun !== run.id) { log.innerHTML = ""; shownSeq = 0; shownRun = run.id; }
+  const fresh = (run.events || []).filter(e => e.seq > shownSeq);
+  if (!fresh.length) return;
+  const stick = log.scrollTop + log.clientHeight >= log.scrollHeight - 30;
+  log.insertAdjacentHTML("beforeend", fresh.map(e => `<div class="${esc(e.level)}"><time>${esc(e.t)}</time>${e.row != null && run.rows[e.row] ? `<span class="who">[${esc(run.rows[e.row].s_no)}]</span>` : ""}${esc(e.msg)}</div>`).join(""));
+  shownSeq = fresh[fresh.length - 1].seq;
+  if (stick) log.scrollTop = log.scrollHeight;
+}
+function renderLive() {
+  const key = run.id + ":" + run.live;
+  if (key === shownLive) return; shownLive = key;
+  $("live").innerHTML = run.live ? `<img alt="Latest view of the agent's browser" src="/files/${run.id}/live.jpg?ts=${run.live}">`
+    : `<p>The agent's browser appears here when it opens an agency site.<br><span class="small">Saved pages are read offline, without a browser.</span></p>`;
+}
+
+// ---------- history ----------
+async function loadHistory() {
+  const h = await api("/api/history");
+  $("hist").innerHTML = h.length ? h.map(r => `<button data-id="${esc(r.id)}" class="${viewing === r.id ? "on" : ""}"><b>${esc(r.input)}</b> <span class="muted small">· ${esc(r.started)}</span><br>
+    <span class="small">${r.applicants} applicant${r.applicants === 1 ? "" : "s"} ${Object.entries(r.counts).map(([s, c]) => `<span class="pill ${tone(s)}">${c} ${esc(s.replace("Verified - ", ""))}</span>`).join(" ")}</span></button>`).join("")
+    : `<div class="muted small">Finished runs are listed here.</div>`;
+}
+$("hist").addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  viewing = b.dataset.id; resetView(); run = await api("/api/history/" + viewing); render(); loadHistory();
+});
+
+// ---------- polling ----------
+let wasBusy = false;
+async function poll() {
+  try {
+    const s = await api("/api/state?since=" + (viewing || !run ? 0 : run.events.length));
+    busy = s.busy;
+    if (!viewing) {
+      if (s.run && run && run.id === s.run.id) { s.run.events = run.events.concat(s.run.events); }
+      run = s.run;
+    }
+    if (wasBusy && !busy) loadHistory();
+    wasBusy = busy; render();
+  } catch (e) { $("stateText").textContent = "Harness not reachable"; }
+}
+(async () => {
+  STEPS = (await api("/api/meta")).steps;
+  await loadInputs("tx_test.xlsx"); await loadHistory(); await poll();
+  setInterval(poll, 1000);
+})();
+</script>
+</body>
+</html>
